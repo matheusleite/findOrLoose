@@ -46,7 +46,7 @@ class GameViewController: UIViewController {
   }
 
   var gameImages: [UIImage] = []
-  var gameTimer: Timer?
+  var gameTimer: AnyCancellable?
   var gameLevel = 0
   var gameScore = 0
 
@@ -90,7 +90,7 @@ class GameViewController: UIViewController {
   // MARK: - Game Functions
 
   func playGame() {
-    gameTimer?.invalidate()
+    gameTimer?.cancel()
 
     gameStateButton.setTitle("Stop", for: .normal)
 
@@ -135,6 +135,22 @@ class GameViewController: UIViewController {
         self.gameScoreLabel.text = "Score: \(self.gameScore)"
 
         // TODO: Handling game score
+        // 1
+        self.gameTimer = Timer.publish(every: 0.1, on: RunLoop.main, in: .common)
+          // 2
+          .autoconnect()
+          // 3
+          .sink { [unowned self] _ in
+            self.gameScoreLabel.text = "Score: \(self.gameScore)"
+            self.gameScore -= 10
+
+            if self.gameScore < 0 {
+              self.gameScore = 0
+
+              self.gameTimer?.cancel()
+            }
+          }
+
 
         self.stopLoaders()
         self.setImages()
@@ -147,7 +163,9 @@ class GameViewController: UIViewController {
   }
 
   func stopGame() {
-    gameTimer?.invalidate()
+    subscriptions.forEach { $0.cancel() }
+
+    gameTimer?.cancel()
 
     gameStateButton.setTitle("Play", for: .normal)
 
@@ -173,6 +191,7 @@ class GameViewController: UIViewController {
   }
 
   func resetImages() {
+    subscriptions = []
     gameImages = []
 
     gameImageView.forEach { $0.image = nil }
